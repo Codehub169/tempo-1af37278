@@ -11,8 +11,25 @@ if [ -n "${GEMINI_API_KEY}" ]; then
 elif [ -n "${GEMINI_API_KEY_INPUT}" ]; then
   echo "Using GEMINI_API_KEY_INPUT environment variable for setup."
   FINAL_GEMINI_API_KEY="${GEMINI_API_KEY_INPUT}"
-else
-  echo "INFO: GEMINI_API_KEY and GEMINI_API_KEY_INPUT environment variables are not set or are empty."
+elif [ -n "${GEMINI_API_KEY_FILE}" ]; then
+  echo "GEMINI_API_KEY_FILE environment variable is set. Attempting to read API key from file: ${GEMINI_API_KEY_FILE}"
+  if [ -f "${GEMINI_API_KEY_FILE}" ] && [ -r "${GEMINI_API_KEY_FILE}" ]; then
+    # Read the first line from the file and remove leading/trailing whitespace
+    GEMINI_API_KEY_FROM_FILE=$(head -n 1 "${GEMINI_API_KEY_FILE}" | xargs)
+    if [ -n "${GEMINI_API_KEY_FROM_FILE}" ]; then
+      FINAL_GEMINI_API_KEY="${GEMINI_API_KEY_FROM_FILE}"
+      echo "Successfully read Gemini API Key from file: ${GEMINI_API_KEY_FILE}"
+    else
+      echo "Warning: GEMINI_API_KEY_FILE (${GEMINI_API_KEY_FILE}) is empty or contains only whitespace. API key not loaded from file."
+    fi
+  else
+    echo "Warning: GEMINI_API_KEY_FILE (${GEMINI_API_KEY_FILE}) not found or not readable. API key not loaded from file."
+  fi
+fi
+
+# If API key is still not found, attempt interactive prompt or show error
+if [ -z "${FINAL_GEMINI_API_KEY}" ]; then
+  echo "INFO: Gemini API Key not found via GEMINI_API_KEY, GEMINI_API_KEY_INPUT, or GEMINI_API_KEY_FILE (or file was invalid/empty)."
   # Check if stdin is a terminal (interactive session)
   if [ -t 0 ]; then
     echo "Attempting to prompt for Gemini API Key interactively."
@@ -24,13 +41,15 @@ else
     else
       echo "ERROR: No API Key was entered interactively."
       echo "This application requires a Google Gemini API key to function."
-      echo "Please provide your API key using one of the following environment variables:"
-      echo "  1. GEMINI_API_KEY"
-      echo "  2. GEMINI_API_KEY_INPUT"
+      echo "Please provide your API key using one of the following methods:"
+      echo "  1. GEMINI_API_KEY (environment variable)"
+      echo "  2. GEMINI_API_KEY_INPUT (environment variable)"
+      echo "  3. GEMINI_API_KEY_FILE (environment variable pointing to a file containing the key)"
       echo ""
-      echo "How to set the environment variable:"
+      echo "How to set environment variables:"
       echo "  - When running with Docker:"
       echo "    docker run -e GEMINI_API_KEY=\"your_api_key_here\" your_image_name"
+      echo "    docker run -e GEMINI_API_KEY_FILE=\"/path/to/keyfile_in_container\" -v /local/path/to/keyfile:/path/to/keyfile_in_container your_image_name"
       echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
       echo ""
       echo "  - When using Docker Compose (in your docker-compose.yml):"
@@ -38,6 +57,10 @@ else
       echo "      your_service_name: # Replace with your service name"
       echo "        environment:"
       echo "          - GEMINI_API_KEY=your_api_key_here"
+      echo "        # Or for file-based key (mount the key file into the container):"
+      echo "        #  - GEMINI_API_KEY_FILE=/path/to/keyfile_in_container"
+      echo "        # volumes:"
+      echo "        #  - /local/path/to/keyfile:/path/to/keyfile_in_container:ro"
       echo "    (Replace 'your_api_key_here' with your actual key)"
       echo ""
       echo "  - When running directly in a shell before executing this script:"
@@ -51,36 +74,41 @@ else
     # Not an interactive terminal, so print the original error and exit.
     echo "ERROR: Gemini API Key is missing and not running in an interactive terminal to prompt for it."
     echo "This application requires a Google Gemini API key to function."
-    echo "Please provide your API key using one of the following environment variables:"
-    echo "  1. GEMINI_API_KEY"
-    echo "  2. GEMINI_API_KEY_INPUT"
+    echo "Please provide your API key using one of the following methods:"
+    echo "  1. GEMINI_API_KEY (environment variable)"
+    echo "  2. GEMINI_API_KEY_INPUT (environment variable)"
+    echo "  3. GEMINI_API_KEY_FILE (environment variable pointing to a file containing the key)"
     echo ""
-    echo "How to set the environment variable:"
+    echo "How to set environment variables:"
     echo "  - When running with Docker:"
     echo "    docker run -e GEMINI_API_KEY=\"your_api_key_here\" your_image_name"
-    echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
+    echo "    docker run -e GEMINI_API_KEY_FILE=\"/path/to/keyfile_in_container\" -v /local/path/to/keyfile:/path/to/keyfile_in_container your_image_name"
+      echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
     echo ""
     echo "  - When using Docker Compose (in your docker-compose.yml):"
     echo "    services:"
-      echo "      your_service_name: # Replace with your service name"
-      echo "        environment:"
-      echo "          - GEMINI_API_KEY=your_api_key_here"
-      echo "    (Replace 'your_api_key_here' with your actual key)"
-      echo ""
-      echo "  - When running directly in a shell before executing this script:"
-      echo "    export GEMINI_API_KEY=\"your_api_key_here\""
-      echo "    # Then run ./startup.sh"
-      echo ""
-      echo "The script will now exit. Please set the API key and try again."
-      exit 1
+    echo "      your_service_name: # Replace with your service name"
+    echo "        environment:"
+    echo "          - GEMINI_API_KEY=your_api_key_here"
+    echo "        # Or for file-based key (mount the key file into the container):"
+    echo "        #  - GEMINI_API_KEY_FILE=/path/to/keyfile_in_container"
+    echo "        # volumes:"
+    echo "        #  - /local/path/to/keyfile:/path/to/keyfile_in_container:ro"
+    echo "    (Replace 'your_api_key_here' with your actual key)"
+    echo ""
+    echo "  - When running directly in a shell before executing this script:"
+    echo "    export GEMINI_API_KEY=\"your_api_key_here\""
+    echo "    # Then run ./startup.sh"
+    echo ""
+    echo "The script will now exit. Please set the API key and try again."
+    exit 1
   fi
 fi
 
 # Ensure FINAL_GEMINI_API_KEY is populated if we haven't exited
 if [ -z "${FINAL_GEMINI_API_KEY}" ]; then
   echo "CRITICAL ERROR: FINAL_GEMINI_API_KEY is unexpectedly empty after all checks. Exiting."
-  # This part of the message should ideally not be reached if the logic above is correct.
-  echo "Please ensure an API key is provided via environment variables (GEMINI_API_KEY or GEMINI_API_KEY_INPUT) or interactively if prompted."
+  echo "Please ensure an API key is provided via environment variables (GEMINI_API_KEY, GEMINI_API_KEY_INPUT, GEMINI_API_KEY_FILE) or interactively if prompted."
   exit 1
 fi
 
