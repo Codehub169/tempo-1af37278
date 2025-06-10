@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse # Kept for potential future use, though not strictly needed now
 import os
 from dotenv import load_dotenv
+from app.api import api_router # Corrected import
 
 # Determine the path to the .env file (backend/.env)
 # __file__ is backend/app/main.py
@@ -20,15 +21,14 @@ app = FastAPI(title="Flashcard Genie API")
 # For production, you might want to restrict origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],  # Allows all origins - For production, restrict this
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
 )
 
-# API Routers will be included here in later stages
-# Example: from app.api.v1.api import api_router
-# app.include_router(api_router, prefix="/api/v1")
+# Include API router
+app.include_router(api_router, prefix="/api/v1")
 
 # Path to the static files directory (backend/app/static)
 # This directory will contain the built frontend assets (index.html, JS, CSS).
@@ -45,18 +45,11 @@ async def health_check():
     """Returns a success status if the API is running."""
     return {"status": "ok", "message": "Flashcard Genie API is healthy!"}
 
-# Fallback for Single Page Application (SPA) routing if not handled by StaticFiles(html=True)
-# This ensures that any path not matched by API routes or static files serves the SPA's index.html,
-# allowing client-side routing to take over.
-# Note: StaticFiles(html=True) should generally handle this for GET requests.
-# This explicit route can be a fallback or for more control.
-@app.get("/{full_path:path}")
-async def serve_spa_fallback(full_path: str):
-    """Serves the main index.html for any other unhandled GET path, supporting SPA routing."""
-    # Check if the requested path might be an API call that wasn't routed (optional)
-    # if full_path.startswith("api/"):
-    #     return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
-    return FileResponse(os.path.join(static_files_dir, "index.html"))
+# Fallback for SPA routing is handled by StaticFiles(html=True) and is no longer needed here.
+# @app.get("/{full_path:path}")
+# async def serve_spa_fallback(full_path: str):
+#     """Serves the main index.html for any other unhandled GET path, supporting SPA routing."""
+#     return FileResponse(os.path.join(static_files_dir, "index.html"))
 
 
 if __name__ == "__main__":
@@ -66,4 +59,5 @@ if __name__ == "__main__":
     print(f"Attempting to load .env from: {dotenv_path}")
     print(f"GEMINI_API_KEY loaded: {'********' if os.getenv('GEMINI_API_KEY') else 'Not found'}")
     print(f"Serving static files from: {static_files_dir}")
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    # Note: Port change here to 8000 to align with startup.sh if running directly
+    uvicorn.run(app, host="0.0.0.0", port=8000)

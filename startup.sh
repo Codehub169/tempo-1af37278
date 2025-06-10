@@ -2,17 +2,23 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# User-provided Gemini API Key
-GEMINI_API_KEY="AIzaSyC4g30zQKAa_BEHMFNPkw8e5AdpVr1XavQ"
+# Check if GEMINI_API_KEY_INPUT is set, if not, prompt the user or exit
+if [ -z "${GEMINI_API_KEY_INPUT}" ]; then
+  echo "Error: GEMINI_API_KEY_INPUT environment variable is not set."
+  echo "Please set it before running the script, e.g., export GEMINI_API_KEY_INPUT=\"your_api_key_here\""
+  exit 1
+fi
 
-echo "🚀 Starting Flashcard Genie setup..."
+GEMINI_API_KEY="${GEMINI_API_KEY_INPUT}"
+
+echo "\nStarting Flashcard Genie setup..."
 
 # Create .env file in backend directory
 echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > backend/.env
 echo ".env file created in backend directory with GEMINI_API_KEY."
 
 # --- Backend Setup ---
-echo "🐍 Setting up Python backend..."
+echo "\n Setting up Python backend..."
 cd backend
 
 if [ ! -d "venv" ]; then
@@ -30,11 +36,11 @@ echo "Installing Python dependencies from requirements.txt..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "✅ Backend setup complete."
+echo "\n Backend setup complete."
 cd ..
 
 # --- Frontend Setup ---
-echo "🌐 Setting up Node.js frontend..."
+echo "\n Setting up Node.js frontend..."
 cd frontend
 
 if [ -d "node_modules" ]; then
@@ -47,11 +53,11 @@ fi
 echo "Building frontend application..."
 npm run build # Assumes vite build, output to 'dist'
 
-echo "✅ Frontend setup complete."
+echo "\n Frontend setup complete."
 cd ..
 
 # --- Prepare static files for Backend serving ---
-echo "🚚 Preparing static files for backend..."
+echo "\n Preparing static files for backend..."
 STATIC_DIR="backend/app/static"
 mkdir -p "${STATIC_DIR}"
 
@@ -67,19 +73,18 @@ fi
 echo "Copying built frontend (from frontend/dist) to ${STATIC_DIR}..."
 cp -r frontend/dist/* "${STATIC_DIR}/"
 
-echo "✅ Static files prepared."
+echo "\n Static files prepared."
 
 # --- Run Application ---
-echo "✨ Starting Flashcard Genie application..."
+echo "\n Starting Flashcard Genie application..."
 cd backend
 
-# Ensure venv is active for this shell session if script was paused/restarted
-# shellcheck disable=SC1091
-source venv/bin/activate
+# Ensure venv is active (already activated earlier in the script if running in one go)
+# source venv/bin/activate # This is redundant if script runs uninterrupted
 
-echo "Backend server will run on http://0.0.0.0:9000"
-echo "Frontend will be served by the backend on http://localhost:9000"
+echo "Backend server will run on http://0.0.0.0:8000"
+echo "Frontend will be served by the backend on http://localhost:8000"
 
 # Run Uvicorn server for FastAPI
-# The application will be accessible on port 9000
-uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+# The application will be accessible on port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

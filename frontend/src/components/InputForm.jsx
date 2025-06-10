@@ -2,36 +2,49 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
 // InputForm component: Handles user input for topic/definition and form submission.
-function InputForm({ onSubmit, isLoading }) {
+function InputForm({ onSubmit, isLoading, setTopic }) { // Added setTopic to props
   // State for the input text
   const [inputText, setInputText] = useState('');
+
+  // Handles text area changes
+  const handleChange = (e) => {
+    const newText = e.target.value;
+    setInputText(newText);
+    if (setTopic) {
+      setTopic(newText); // Update topic in parent component (App.jsx) for error clearing logic
+    }
+  };
 
   // Handles form submission
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default form submission behavior
     if (inputText.trim() && !isLoading) {
       onSubmit(inputText.trim()); // Call the onSubmit prop with the trimmed input text
+      // Optional: Clear input field after submission if desired by UX
+      // setInputText('');
+      // if (setTopic) setTopic(''); 
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="input-section mb-8">
-      <label htmlFor="topic-input" className="block text-base font-semibold text-content-heading dark:text-dark-content-heading mb-3">
+      <label htmlFor="topic-input" className="block text-base font-semibold text-content-heading dark:text-content-heading-dark mb-3">
         Enter Topic or Definition:
       </label>
       <textarea
         id="topic-input"
-        className="w-full min-h-[120px] p-4 font-sans text-base border border-ui-input-border dark:border-dark-ui-input-border rounded-lg resize-vertical bg-ui-background dark:bg-dark-ui-background text-content-primary dark:text-dark-content-primary placeholder-content-secondary dark:placeholder-dark-content-secondary focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary transition-colors duration-200 ease-in-out shadow-sm"
+        className="w-full min-h-[120px] p-4 font-sans text-base border border-ui-input-border dark:border-ui-input-border-dark rounded-lg resize-vertical bg-ui-background dark:bg-ui-background-dark text-content-primary dark:text-content-primary-dark placeholder-content-secondary dark:placeholder-content-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-primary-dark focus:border-primary dark:focus:border-primary-dark transition-colors duration-200 ease-in-out shadow-sm"
         placeholder="e.g., 'The intricacies of Quantum Entanglement' or 'A philosophical movement emphasizing individual existence, freedom, and choice.'"
         value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
+        onChange={handleChange} // Use handleChange to also call setTopic
         disabled={isLoading} // Disable textarea when loading
         aria-label="Topic or Definition Input"
+        rows={4} // Suggest a default number of rows, min-h handles actual min height
       />
       <button
         id="generate-button"
         type="submit"
-        className={`flex items-center justify-center w-full mt-6 px-7 py-4 font-display text-lg font-semibold rounded-lg transition-all duration-200 ease-in-out shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm ${isLoading ? 'bg-ui-border dark:bg-dark-ui-border cursor-not-allowed' : 'bg-primary dark:bg-dark-primary text-button-text dark:text-dark-button-text hover:bg-primary-lighter dark:hover:bg-dark-primary-lighter'}`}
+        className={`flex items-center justify-center w-full mt-6 px-7 py-4 font-display text-lg font-semibold rounded-lg transition-all duration-200 ease-in-out shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm ${isLoading ? 'bg-ui-border dark:bg-ui-border-dark text-content-secondary dark:text-content-secondary-dark cursor-not-allowed' : 'bg-primary dark:bg-primary-dark text-button-text dark:text-button-text-dark hover:bg-primary-alt dark:hover:bg-primary-alt-dark'}`}
         disabled={isLoading} // Disable button when loading
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6 mr-3">
@@ -46,6 +59,7 @@ function InputForm({ onSubmit, isLoading }) {
 InputForm.propTypes = {
   onSubmit: PropTypes.func.isRequired, // Function to call when form is submitted
   isLoading: PropTypes.bool.isRequired, // Boolean indicating if loading is in progress
+  setTopic: PropTypes.func.isRequired, // Function to update topic in parent, used for App.jsx's error clearing effect
 };
 
 export default InputForm;
