@@ -2,23 +2,33 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Check if GEMINI_API_KEY_INPUT is set, if not, prompt the user or exit
-if [ -z "${GEMINI_API_KEY_INPUT}" ]; then
-  echo "Error: GEMINI_API_KEY_INPUT environment variable is not set."
-  echo "Please set it before running the script, e.g., export GEMINI_API_KEY_INPUT=\"your_api_key_here\""
+# Determine the API key to use
+FINAL_GEMINI_API_KEY=""
+
+if [ -n "${GEMINI_API_KEY}" ]; then
+  echo "Using pre-existing GEMINI_API_KEY environment variable for setup."
+  FINAL_GEMINI_API_KEY="${GEMINI_API_KEY}"
+elif [ -n "${GEMINI_API_KEY_INPUT}" ]; then
+  echo "Using GEMINI_API_KEY_INPUT environment variable for setup."
+  FINAL_GEMINI_API_KEY="${GEMINI_API_KEY_INPUT}"
+else
+  echo "Error: Neither GEMINI_API_KEY nor GEMINI_API_KEY_INPUT environment variable is set."
+  echo "Please set one of them before running the script."
+  echo "  e.g., export GEMINI_API_KEY=\"your_api_key_here\""
+  echo "  or,   export GEMINI_API_KEY_INPUT=\"your_api_key_here\""
   exit 1
 fi
 
-GEMINI_API_KEY="${GEMINI_API_KEY_INPUT}"
-
-echo "\nStarting Flashcard Genie setup..."
+echo -e "\nStarting Flashcard Genie setup..."
 
 # Create .env file in backend directory
-echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > backend/.env
+# Ensure backend directory exists
+mkdir -p backend
+echo "GEMINI_API_KEY=${FINAL_GEMINI_API_KEY}" > backend/.env
 echo ".env file created in backend directory with GEMINI_API_KEY."
 
 # --- Backend Setup ---
-echo "\n Setting up Python backend..."
+echo -e "\nSetting up Python backend..."
 cd backend
 
 if [ ! -d "venv" ]; then
@@ -34,30 +44,40 @@ source venv/bin/activate
 
 echo "Installing Python dependencies from requirements.txt..."
 pip install --upgrade pip
-pip install -r requirements.txt
+if [ -f "requirements.txt" ]; then
+  pip install -r requirements.txt
+else
+  echo "Warning: requirements.txt not found in backend directory. Skipping pip install -r."
+fi
 
-echo "\n Backend setup complete."
+echo -e "\nBackend setup complete."
 cd ..
 
 # --- Frontend Setup ---
-echo "\n Setting up Node.js frontend..."
+echo -e "\nSetting up Node.js frontend..."
+# Ensure frontend directory exists
+mkdir -p frontend
 cd frontend
 
-if [ -d "node_modules" ]; then
-  echo "Node modules already installed. Skipping npm install."
+if [ -f "package.json" ]; then
+  if [ -d "node_modules" ]; then
+    echo "Node modules already installed. Skipping npm install."
+  else
+    echo "Installing frontend dependencies with npm..."
+    npm install
+  fi
+
+  echo "Building frontend application..."
+  npm run build # Assumes vite build, output to 'dist'
 else
-  echo "Installing frontend dependencies with npm..."
-  npm install
+  echo "Warning: package.json not found in frontend directory. Skipping frontend setup."
 fi
 
-echo "Building frontend application..."
-npm run build # Assumes vite build, output to 'dist'
-
-echo "\n Frontend setup complete."
+echo -e "\nFrontend setup complete."
 cd ..
 
 # --- Prepare static files for Backend serving ---
-echo "\n Preparing static files for backend..."
+echo -e "\nPreparing static files for backend..."
 STATIC_DIR="backend/app/static"
 mkdir -p "${STATIC_DIR}"
 
@@ -69,18 +89,24 @@ else
   echo "Static directory is empty or does not exist yet. No cleanup needed."
 fi
 
-
-echo "Copying built frontend (from frontend/dist) to ${STATIC_DIR}..."
-cp -r frontend/dist/* "${STATIC_DIR}/"
-
-echo "\n Static files prepared."
+if [ -d "frontend/dist" ] && [ -n "$(ls -A frontend/dist/ 2>/dev/null)" ]; then
+  echo "Copying built frontend (from frontend/dist) to ${STATIC_DIR}..."
+  cp -r frontend/dist/* "${STATIC_DIR}/"
+  echo -e "\nStatic files prepared."
+elif [ -f "frontend/package.json" ]; then # Only error if frontend setup was attempted
+  echo "Error: Frontend build directory 'frontend/dist' is empty or does not exist after build attempt."
+  echo "Frontend build might have failed or produced no output. Please check the logs."
+  exit 1
+else
+  echo "Skipping frontend static file copy as frontend setup was skipped (no package.json)."
+fi
 
 # --- Run Application ---
-echo "\n Starting Flashcard Genie application..."
+echo -e "\nStarting Flashcard Genie application..."
 cd backend
 
 # Ensure venv is active (already activated earlier in the script if running in one go)
-# source venv/bin/activate # This is redundant if script runs uninterrupted
+# The source command modifies the current shell's environment, so it persists.
 
 echo "Backend server will run on http://0.0.0.0:8000"
 echo "Frontend will be served by the backend on http://localhost:8000"
