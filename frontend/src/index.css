@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ui-background text-content-primary font-sans;
+    @apply transition-colors duration-300 ease-in-out;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  /* For custom scrollbar styling - optional */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ui-background dark:bg-ui-background-dark;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ui-border dark:bg-ui-border-dark rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/70 dark:bg-primary-dark/70;
+  }
+}
+
+@layer components {
+  /* Spinner animation - can be used by LoadingSpinner.jsx */
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 4px solid;
+    @apply border-primary/20 dark:border-primary-dark/20;
+    @apply border-t-primary dark:border-t-primary-dark;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Flashcard animation - can be used by Flashcard.jsx */
+  .flashcard-enter {
+    opacity: 0;
+    transform: translateY(25px) scale(0.98);
+  }
+  .flashcard-enter-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.6s cubic-bezier(0.165, 0.84, 0.44, 1), transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+}
