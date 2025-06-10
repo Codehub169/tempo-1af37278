@@ -12,10 +12,29 @@ elif [ -n "${GEMINI_API_KEY_INPUT}" ]; then
   echo "Using GEMINI_API_KEY_INPUT environment variable for setup."
   FINAL_GEMINI_API_KEY="${GEMINI_API_KEY_INPUT}"
 else
-  echo "Error: Neither GEMINI_API_KEY nor GEMINI_API_KEY_INPUT environment variable is set."
-  echo "Please set one of them before running the script."
-  echo "  e.g., export GEMINI_API_KEY=\"your_api_key_here\""
-  echo "  or,   export GEMINI_API_KEY_INPUT=\"your_api_key_here\""
+  echo "ERROR: Gemini API Key is missing."
+  echo "This application requires a Google Gemini API key to function."
+  echo "Please provide your API key using one of the following environment variables:"
+  echo "  1. GEMINI_API_KEY"
+  echo "  2. GEMINI_API_KEY_INPUT"
+  echo ""
+  echo "How to set the environment variable:"
+  echo "  - When running with Docker:"
+  echo "    docker run -e GEMINI_API_KEY=\"your_api_key_here\" your_image_name"
+  echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
+  echo ""
+  echo "  - When using Docker Compose (in your docker-compose.yml):"
+  echo "    services:"
+  echo "      your_service_name: # Replace with your service name"
+  echo "        environment:"
+  echo "          - GEMINI_API_KEY=your_api_key_here"
+  echo "    (Replace 'your_api_key_here' with your actual key)"
+  echo ""
+  echo "  - When running directly in a shell before executing this script:"
+  echo "    export GEMINI_API_KEY=\"your_api_key_here\""
+  echo "    # Then run ./startup.sh"
+  echo ""
+  echo "The script will now exit. Please set the API key and try again."
   exit 1
 fi
 
@@ -86,7 +105,7 @@ if [ -n "$(ls -A ${STATIC_DIR}/ 2>/dev/null)" ]; then
   echo "Cleaning old static files from ${STATIC_DIR}..."
   rm -rf "${STATIC_DIR:?}"/*
 else
-  echo "Static directory is empty or does not exist yet. No cleanup needed."
+  echo "Static directory '${STATIC_DIR}' is empty or does not exist yet. No cleanup needed."
 fi
 
 if [ -d "frontend/dist" ] && [ -n "$(ls -A frontend/dist/ 2>/dev/null)" ]; then
