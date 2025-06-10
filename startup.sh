@@ -4,6 +4,7 @@ set -e
 
 # Determine the API key to use
 FINAL_GEMINI_API_KEY=""
+PLACEHOLDER_API_KEY="PLACEHOLDER_GEMINI_API_KEY_REPLACE_ME"
 
 if [ -n "${GEMINI_API_KEY}" ]; then
   echo "Using pre-existing GEMINI_API_KEY environment variable for setup."
@@ -14,7 +15,7 @@ elif [ -n "${GEMINI_API_KEY_INPUT}" ]; then
 elif [ -n "${GEMINI_API_KEY_FILE}" ]; then
   echo "GEMINI_API_KEY_FILE environment variable is set. Attempting to read API key from file: ${GEMINI_API_KEY_FILE}"
   if [ -f "${GEMINI_API_KEY_FILE}" ] && [ -r "${GEMINI_API_KEY_FILE}" ]; then
-    # Read the first line from the file and remove leading/trailing whitespace
+    # Read the first line and trim leading/trailing whitespace
     GEMINI_API_KEY_FROM_FILE=$(head -n 1 "${GEMINI_API_KEY_FILE}" | xargs)
     if [ -n "${GEMINI_API_KEY_FROM_FILE}" ]; then
       FINAL_GEMINI_API_KEY="${GEMINI_API_KEY_FROM_FILE}"
@@ -27,11 +28,10 @@ elif [ -n "${GEMINI_API_KEY_FILE}" ]; then
   fi
 fi
 
-# If API key is still not found, attempt interactive prompt or show error
+# If API key is still not found, attempt interactive prompt or use placeholder for non-interactive
 if [ -z "${FINAL_GEMINI_API_KEY}" ]; then
   echo "INFO: Gemini API Key not found via GEMINI_API_KEY, GEMINI_API_KEY_INPUT, or GEMINI_API_KEY_FILE (or file was invalid/empty)."
-  # Check if stdin is a terminal (interactive session)
-  if [ -t 0 ]; then
+  if [ -t 0 ]; then # Check if stdin is a terminal (interactive session)
     echo "Attempting to prompt for Gemini API Key interactively."
     printf "Please enter your Google Gemini API Key: "
     read -r GEMINI_API_KEY_INTERACTIVE_INPUT
@@ -40,82 +40,47 @@ if [ -z "${FINAL_GEMINI_API_KEY}" ]; then
       echo "Using Gemini API Key provided interactively."
     else
       echo "ERROR: No API Key was entered interactively."
-      echo "This application requires a Google Gemini API key to function."
-      echo "Please provide your API key using one of the following methods:"
-      echo "  1. GEMINI_API_KEY (environment variable)"
-      echo "  2. GEMINI_API_KEY_INPUT (environment variable)"
-      echo "  3. GEMINI_API_KEY_FILE (environment variable pointing to a file containing the key)"
-      echo ""
-      echo "How to set environment variables:"
-      echo "  - When running with Docker:"
-      echo "    docker run -e GEMINI_API_KEY=\"your_api_key_here\" your_image_name"
-      echo "    docker run -e GEMINI_API_KEY_FILE=\"/path/to/keyfile_in_container\" -v /local/path/to/keyfile:/path/to/keyfile_in_container your_image_name"
-      echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
-      echo ""
-      echo "  - When using Docker Compose (in your docker-compose.yml):"
-      echo "    services:"
-      echo "      your_service_name: # Replace with your service name"
-      echo "        environment:"
-      echo "          - GEMINI_API_KEY=your_api_key_here"
-      echo "        # Or for file-based key (mount the key file into the container):"
-      echo "        #  - GEMINI_API_KEY_FILE=/path/to/keyfile_in_container"
-      echo "        # volumes:"
-      echo "        #  - /local/path/to/keyfile:/path/to/keyfile_in_container:ro"
-      echo "    (Replace 'your_api_key_here' with your actual key)"
-      echo ""
-      echo "  - When running directly in a shell before executing this script:"
-      echo "    export GEMINI_API_KEY=\"your_api_key_here\""
-      echo "    # Then run ./startup.sh"
-      echo ""
-      echo "The script will now exit. Please set the API key and try again."
-      exit 1
+      echo "The application will use a placeholder API key. Flashcard generation will NOT work."
+      echo "Please provide a valid API key for full functionality."
+      FINAL_GEMINI_API_KEY="${PLACEHOLDER_API_KEY}"
+      # Exit if interactive and no key provided? Or let it run with placeholder?
+      # For now, let it run with placeholder even if interactive prompt failed to get input.
+      # To make it stricter for interactive: uncomment exit 1 and remove placeholder assignment above.
+      # echo "Exiting. Please set the API key and try again."
+      # exit 1 
     fi
   else
-    # Not an interactive terminal, so print the original error and exit.
-    echo "ERROR: Gemini API Key is missing and not running in an interactive terminal to prompt for it."
-    echo "This application requires a Google Gemini API key to function."
+    # Not an interactive terminal, so use placeholder and print warning.
+    echo "WARNING: Gemini API Key is missing and not running in an interactive terminal to prompt for it."
+    echo "The application will start with a placeholder API key: '${PLACEHOLDER_API_KEY}'"
+    echo "Flashcard generation will NOT work until a valid GEMINI_API_KEY is provided."
     echo "Please provide your API key using one of the following methods:"
     echo "  1. GEMINI_API_KEY (environment variable)"
     echo "  2. GEMINI_API_KEY_INPUT (environment variable)"
     echo "  3. GEMINI_API_KEY_FILE (environment variable pointing to a file containing the key)"
-    echo ""
-    echo "How to set environment variables:"
-    echo "  - When running with Docker:"
-    echo "    docker run -e GEMINI_API_KEY=\"your_api_key_here\" your_image_name"
-    echo "    docker run -e GEMINI_API_KEY_FILE=\"/path/to/keyfile_in_container\" -v /local/path/to/keyfile:/path/to/keyfile_in_container your_image_name"
-      echo "    (Replace 'your_api_key_here' with your actual key and 'your_image_name' with your Docker image name)"
-    echo ""
-    echo "  - When using Docker Compose (in your docker-compose.yml):"
-    echo "    services:"
-    echo "      your_service_name: # Replace with your service name"
-    echo "        environment:"
-    echo "          - GEMINI_API_KEY=your_api_key_here"
-    echo "        # Or for file-based key (mount the key file into the container):"
-    echo "        #  - GEMINI_API_KEY_FILE=/path/to/keyfile_in_container"
-    echo "        # volumes:"
-    echo "        #  - /local/path/to/keyfile:/path/to/keyfile_in_container:ro"
-    echo "    (Replace 'your_api_key_here' with your actual key)"
-    echo ""
-    echo "  - When running directly in a shell before executing this script:"
-    echo "    export GEMINI_API_KEY=\"your_api_key_here\""
-    echo "    # Then run ./startup.sh"
-    echo ""
-    echo "The script will now exit. Please set the API key and try again."
-    exit 1
+    FINAL_GEMINI_API_KEY="${PLACEHOLDER_API_KEY}"
+    # DO NOT EXIT HERE - allow server to start with placeholder
   fi
 fi
 
-# Ensure FINAL_GEMINI_API_KEY is populated if we haven't exited
+# Ensure FINAL_GEMINI_API_KEY is populated (it should be, even if it's the placeholder)
 if [ -z "${FINAL_GEMINI_API_KEY}" ]; then
-  echo "CRITICAL ERROR: FINAL_GEMINI_API_KEY is unexpectedly empty after all checks. Exiting."
-  echo "Please ensure an API key is provided via environment variables (GEMINI_API_KEY, GEMINI_API_KEY_INPUT, GEMINI_API_KEY_FILE) or interactively if prompted."
+  echo "CRITICAL ERROR: FINAL_GEMINI_API_KEY is unexpectedly empty after all checks. This should not happen. Exiting."
   exit 1
+fi
+
+# If the key is the placeholder, issue a final prominent warning.
+if [ "${FINAL_GEMINI_API_KEY}" = "${PLACEHOLDER_API_KEY}" ]; then
+  echo -e "\n************************************************************************************"
+  echo "WARNING: USING PLACEHOLDER GEMINI API KEY: '${PLACEHOLDER_API_KEY}'"
+  echo "The application will run, but AI-powered features (flashcard generation) WILL FAIL."
+  echo "Please configure a valid GEMINI_API_KEY environment variable for full functionality."
+  echo "************************************************************************************\n"
 fi
 
 echo -e "\nStarting Flashcard Genie setup..."
 
 # Create .env file in backend directory
-# Ensure backend directory exists
 mkdir -p backend
 echo "GEMINI_API_KEY=${FINAL_GEMINI_API_KEY}" > backend/.env
 echo ".env file created in backend directory with GEMINI_API_KEY."
@@ -148,20 +113,23 @@ cd ..
 
 # --- Frontend Setup ---
 echo -e "\nSetting up Node.js frontend..."
-# Ensure frontend directory exists
 mkdir -p frontend
 cd frontend
 
 if [ -f "package.json" ]; then
-  if [ -d "node_modules" ]; then
-    echo "Node modules already installed. Skipping npm install."
+  if [ -d "node_modules" ] && [ -f "package-lock.json" ]; then # Check for package-lock.json for more robust check
+    echo "Node modules already installed (node_modules and package-lock.json exist). Skipping npm install."
   else
-    echo "Installing frontend dependencies with npm..."
-    npm install
+    echo "Installing frontend dependencies with npm ci (clean install if package-lock.json exists) or npm install..."
+    if [ -f "package-lock.json" ]; then
+      npm ci
+    else
+      npm install
+    fi
   fi
 
   echo "Building frontend application..."
-  npm run build # Assumes vite build, output to 'dist'
+  npm run build
 else
   echo "Warning: package.json not found in frontend directory. Skipping frontend setup."
 fi
@@ -174,8 +142,6 @@ echo -e "\nPreparing static files for backend..."
 STATIC_DIR="backend/app/static"
 mkdir -p "${STATIC_DIR}"
 
-# Clear out old static files, if any
-# The check ensures the directory exists and is not empty before attempting to remove its contents.
 if [ -d "${STATIC_DIR}" ] && [ -n "$(ls -A "${STATIC_DIR}/" 2>/dev/null)" ]; then
   echo "Cleaning old static files from ${STATIC_DIR}..."
   rm -rf "${STATIC_DIR:?}"/*
@@ -199,13 +165,22 @@ fi
 echo -e "\nStarting Flashcard Genie application..."
 cd backend
 
-# Ensure venv is active (already activated earlier in the script if running in one go)
-# The source command modifies the current shell's environment, so it persists.
+# Ensure venv is active (it should be if this script runs in a single shell session)
+# If running parts of this script separately, venv might need reactivation.
+if [ -z "${VIRTUAL_ENV}" ]; then
+    echo "Warning: Python virtual environment not detected as active. Attempting to activate..."
+    if [ -f "venv/bin/activate" ]; then
+        # shellcheck disable=SC1091
+        source venv/bin/activate
+        echo "Virtual environment activated."
+    else
+        echo "Error: venv/bin/activate not found. Backend might not run correctly."
+        # Consider exiting if venv is critical and not active: exit 1
+    fi
+fi
 
 echo "Backend server will run on http://0.0.0.0:8000"
 echo "Frontend will be served by the backend on http://localhost:8000"
 
-# Run Uvicorn server for FastAPI
-# The application will be accessible on port 8000
-# Using exec to replace the shell process with uvicorn, making uvicorn the main process (PID 1 in Docker if this script is entrypoint)
+# Use --reload for development, consider removing for production deployments
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
